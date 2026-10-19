@@ -210,9 +210,7 @@ function Do-Logout {
 
 # ---------------------------------------------------------------- entry
 if ($Logout) { Do-Logout }
-if (-not $Force -and (Test-Online)) { Say 'Already online, nothing to do'; Bye 0 }
-if ($Check) { Say 'Not online'; Bye 1 }
-if ($DryRun) { $Force = $true }
+$Interactive = -not [Console]::IsInputRedirected
 
 # ---------------------------------------------------------------- 0. menu
 # Same idea as the shell script: each entry re-runs this script with the
@@ -255,7 +253,11 @@ if ($Menu -or ($PSBoundParameters.Count -eq 0 -and $Interactive)) {
     Bye 0
 }
 
-$Interactive = -not [Console]::IsInputRedirected
+if (-not $Force -and (Test-Online)) { Say 'Already online, nothing to do'; Bye 0 }
+if ($Check) { Say 'Not online'; Bye 1 }
+if ($DryRun) { $Force = $true }
+
+
 if (-not $User -and $Interactive) {
     $u = Read-Host 'Student/Staff ID'
     if ($u) { $User = $u.Trim() }
