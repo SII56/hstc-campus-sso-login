@@ -96,7 +96,8 @@ usage: ./campus-sso-login.sh [option]
   (no option)     log in; skip if already online
   --menu          interactive menu
   --sms [mobile]  log in with an SMS code sent to your phone
-  --type <0-3>    terminal type reported to the portal (default 1 = phone)
+  --mp            report as a phone (default, 2 device slots)
+  --pc            report as a PC (1 device slot)
   --check         only report the online state
   --logout        log out (unbind MAC, then CAS sign-off)
   --force         ignore the online state
@@ -127,14 +128,8 @@ while [ $# -gt 0 ]; do
       esac
       continue
       ;;
-    --type)
-      shift
-      case "${1:-}" in
-        [0-3]) MAC_TYPE="$1"; shift ;;
-        *) printf '  --type needs a value 0-3\n' >&2; exit 2 ;;
-      esac
-      continue
-      ;;
+    --pc)      MAC_TYPE=0 ;;
+    --mp)      MAC_TYPE=1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
