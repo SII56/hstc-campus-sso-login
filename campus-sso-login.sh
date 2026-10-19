@@ -100,11 +100,12 @@ usage: ./campus-sso-login.sh [option]
   --logout        log out (unbind MAC, then CAS sign-off)
   --force         ignore the online state
   --dry-run       walk the chain but never submit a password
+  --init          create campus.conf (writes your password to disk)
   -h, --help      show this list
 USAGE
 }
 
-CHECK=0; FORCE=0; DRY=0; LOGOUT=0; SMS=0; SMS_MOBILE=""; MENU=0
+CHECK=0; FORCE=0; DRY=0; LOGOUT=0; SMS=0; SMS_MOBILE=""; MENU=0; INIT=0
 # The menu is opt-in (--menu). With no arguments the script logs in, as before.
 [ "${CAMPUS_MENU:-0}" = 1 ] && MENU=1
 while [ $# -gt 0 ]; do
@@ -115,6 +116,7 @@ while [ $# -gt 0 ]; do
     --logout)  LOGOUT=1 ;;
     --force)   FORCE=1 ;;
     --dry-run) DRY=1; FORCE=1 ;;
+    --init)    INIT=1 ;;
     --sms)
       SMS=1
       shift
@@ -237,6 +239,35 @@ logout_now(){
 
 if [ "$LOGOUT" = 1 ]; then logout_now; exit $?; fi
 
+# ---------------------------------------------------------------- init
+# Escape the few characters that would break a double-quoted shell assignment.
+dq_escape(){ printf '%s' "$1" | sed 's/[\\"$`]/\\&/g'; }
+
+init_conf(){
+  local f="$SELF_DIR/campus.conf"
+  if [ -e "$f" ]; then
+    printf '%s already exists.\n' "$f" >&2
+    printf 'Overwrite it? [y/N] ' >&2
+    read -r ans
+    case "$ans" in y|Y|yes|YES) ;; *) log "aborted, nothing changed"; return 1 ;; esac
+  fi
+  printf 'Student/Staff ID: ' >&2
+  read -r in_user
+  printf 'Unified-auth password (not echoed): ' >&2
+  read -rs in_pass; echo >&2
+  if [ -z "$in_user" ] || [ -z "$in_pass" ]; then
+    log "both fields are required, nothing changed"
+    return 1
+  fi
+  ( umask 077
+    printf '# created by --init; never commit this file\nCAMPUS_USER="%s"\nCAMPUS_PASS="%s"\n' \
+      "$(dq_escape "$in_user")" "$(dq_escape "$in_pass")" > "$f" )
+  chmod 600 "$f"
+  log "wrote $f (mode 600)"
+  log "note: the password is stored in plain text - keep the file private"
+  return 0
+}
+
 # ---------------------------------------------------------------- 0. menu
 # A thin wrapper: every entry just re-runs this script with the equivalent
 # flags in a child process, so the prompts (password / SMS code) keep working.
@@ -253,6 +284,7 @@ menu_loop(){
     printf '   3) check status\n'
     printf '   4) logout\n'
     printf '   5) re-authenticate      (logout, then login again)\n'
+    printf '   7) create campus.conf  (saves your password to disk)\n'
     printf '   h) all options\n'
     printf '   0) quit\n\n'
     printf '  choice: '
@@ -263,6 +295,7 @@ menu_loop(){
       3) CAMPUS_MENU=0 "$self" --check ;;
       4) CAMPUS_MENU=0 "$self" --logout ;;
       5) CAMPUS_MENU=0 "$self" --logout && CAMPUS_MENU=0 "$self" --login ;;
+      7) CAMPUS_MENU=0 "$self" --init ;;
       h|help) CAMPUS_MENU=0 "$self" --help ;;
       0|q|quit) return 0 ;;
       *) printf '  not an option\n' >&2 ;;
@@ -272,6 +305,7 @@ menu_loop(){
   done
 }
 
+if [ "$INIT" = 1 ]; then init_conf; exit $?; fi
 if [ "$MENU" = 1 ]; then menu_loop; exit $?; fi
 
 if [ "$CHECK" = 1 ]; then

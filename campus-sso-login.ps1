@@ -28,7 +28,8 @@ param(
     [string]$Mobile = '',
     [switch]$Menu,
     [switch]$Login,
-    [switch]$Help
+    [switch]$Help,
+    [switch]$Init
 )
 
 $ErrorActionPreference = 'Stop'
@@ -214,6 +215,36 @@ if ($Logout) { Do-Logout }
 $Interactive = -not [Console]::IsInputRedirected
 
 
+# ---------------------------------------------------------------- init
+function Esc-Dq([string]$v) {
+    return $v.Replace('`', '``').Replace('"', '`"').Replace('$', '`$')
+}
+
+function Do-Init {
+    $conf = Join-Path $PSScriptRoot 'campus.conf.ps1'
+    if (Test-Path $conf) {
+        $a = Read-Host "$conf already exists. Overwrite it? [y/N]"
+        if ($a -notmatch '^(?i:y|yes)$') { Say 'aborted, nothing changed'; return }
+    }
+    $u = Read-Host 'Student/Staff ID'
+    $sec = Read-Host 'Unified-auth password (not echoed)' -AsSecureString
+    $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)
+    try   { $pw = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr) }
+    finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr) }
+    if (-not $u -or -not $pw) { Say 'both fields are required, nothing changed'; return }
+    $body = "# created by -Init; never commit this file`r`n" +
+            "`$CAMPUS_USER = `"$((Esc-Dq $u))`"`r`n" +
+            "`$CAMPUS_PASS = `"$((Esc-Dq $pw))`"`r`n"
+    [IO.File]::WriteAllText($conf, $body, [Text.Encoding]::UTF8)
+    Say "wrote $conf"
+    Say 'note: the password is stored in plain text - keep the file private'
+}
+
+if ($Init) {
+    Do-Init
+    Bye 0
+}
+
 if ($Help) {
     Write-Host ''
     Write-Host '  usage: .\\campus-sso-login.cmd [option]'
@@ -222,6 +253,7 @@ if ($Help) {
     Write-Host '    -Menu           interactive menu'
     Write-Host '    -Sms <mobile>   log in with an SMS code sent to your phone'
     Write-Host '    -Check          only report the online state'
+    Write-Host '    -Init           create campus.conf.ps1 (writes your password to disk)'
     Write-Host '    -Logout         log out (unbind MAC, then CAS sign-off)'
     Write-Host '    -Force          ignore the online state'
     Write-Host '    -DryRun         walk the chain but never submit a password'
@@ -248,6 +280,7 @@ function Show-Menu {
         Write-Host '   3) check status'
         Write-Host '   4) logout'
         Write-Host '   5) re-authenticate      (logout, then login again)'
+        Write-Host '   7) create campus.conf.ps1  (saves your password to disk)'
         Write-Host '   h) all options'
         Write-Host '   0) quit'
         Write-Host ''
@@ -259,6 +292,7 @@ function Show-Menu {
             '3' { & $self -Check }
             '4' { & $self -Logout }
             '5' { & $self -Logout; & $self -Login }
+            '7' { & $self -Init }
             'h' { & $self -Help }
             default { Write-Host '  not an option'; continue }
         }

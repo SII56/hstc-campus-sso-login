@@ -23,6 +23,7 @@ campus-sso-login.cmd
 campus-sso-login.cmd -Menu             # 菜单
 campus-sso-login.cmd -Check            # 只看在不在线
 campus-sso-login.cmd -Sms 138xxxxxxxx  # 短信登录（验证码发到手机）
+campus-sso-login.cmd -Init             # 生成 campus.conf.ps1
 campus-sso-login.cmd -DryRun           # 走完整条链路，但不提交密码
 campus-sso-login.cmd -Logout           # 注销
 campus-sso-login.cmd -Force            # 忽略在线状态，强制认证
@@ -60,6 +61,7 @@ chmod +x campus-sso-login.sh
 ./campus-sso-login.sh --check
 ./campus-sso-login.sh --sms 138xxxxxxxx   # 短信登录（验证码会发到你手机）
 # 走完整条链路，但不提交密码
+./campus-sso-login.sh --init
 ./campus-sso-login.sh --dry-run
 # 注销
 ./campus-sso-login.sh --logout
@@ -68,6 +70,17 @@ chmod +x campus-sso-login.sh
 ```
 
 ## 账号密码
+
+一条命令生成（会提示输入学号和密码，密码不回显）：
+
+```bash
+./campus-sso-login.sh --init
+```
+
+写入 `campus.conf` 并自动设成 `600` 权限；已存在时会先问你确认。
+Windows 上是 `campus-sso-login.cmd -Init`，写入 `campus.conf.ps1`。
+
+也可以手动改：
 
 ```bash
 cp campus.conf.example campus.conf
@@ -80,9 +93,12 @@ vi campus.conf
 > 只有 CAS 真的要你填登录表单时才会问密码。如果 CAS 已经认得这台机器（IP 级 SSO），
 > 它会直接发 ticket，全程不需要密码。
 
-**脚本不保存任何密码**：密码只在这个进程的内存里，从 stdin 交给 curl，
-不会出现在 `ps` 的命令行里；`cookies.txt`（可能含 CAS 会话 cookie）退出时自动删除，
-工作目录权限 700。
+**不用 `campus.conf` 时脚本不保存任何密码**：密码只在这个进程的内存里，从 stdin
+交给 curl，不会出现在 `ps` 的命令行里；`cookies.txt`（可能含 CAS 会话 cookie）
+退出时自动删除，工作目录权限 700。
+
+用了 `--init` 就会把密码**明文**写进 `campus.conf`（`600` 权限、已在 `.gitignore` 里）。
+要不要这个便利，你自己权衡——只是想临时登录的话，直接运行、按提示输入就行。
 
 ## 出问题看这里
 
