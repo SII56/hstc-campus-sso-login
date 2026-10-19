@@ -16,6 +16,7 @@ CAMPUS_PASS="your-password"
 # Optional overrides - the defaults already target hstc.
 # ---------------------------------------------------------------------------
 # CAMPUS_PORTAL="https://rz.hstc.edu.cn"
+# CAMPUS_MAC_TYPE="1"        # terminal type: 1 phone (default), 0 other/PC
 # CAMPUS_CAS="https://hscas.hstc.edu.cn/cas"
 # CAMPUS_EP_HTTP_PORT="801"        # eportal API, plain HTTP (login)
 # CAMPUS_EP_HTTPS_PORT="802"       # eportal API, HTTPS (logout / mac unbind)

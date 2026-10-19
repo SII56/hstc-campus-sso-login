@@ -43,6 +43,11 @@ trap {
 $Probe    = 'http://connect.rom.miui.com/generate_204'
 $Portal   = 'https://rz.hstc.edu.cn'
 $CasBase  = 'https://hscas.hstc.edu.cn/cas'
+# Terminal type reported to the portal: 1 = phone, 0 = anything else.
+# The page computes mac_type = (term.type == 2 ? 1 : 0), where term.type is
+# 1 PC / 2 phone / 3 tablet, and the value is carried into the CAS "state"
+# (second field), which is what the self-service backend displays.
+$MacType  = 1
 $EpPort   = 801
 $EpHttpsPort = 802
 $UA       = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -56,6 +61,9 @@ if (Test-Path $ConfFile) {
     . $ConfFile
     if (-not $User -and $CAMPUS_USER) { $User = $CAMPUS_USER }
     if (-not $Pass -and $CAMPUS_PASS) { $Pass = $CAMPUS_PASS }
+    # Optional overrides; the defaults above are a desktop UA and a phone terminal.
+    if ($CAMPUS_UA) { $UA = $CAMPUS_UA }
+    if ($CAMPUS_MAC_TYPE) { $MacType = [int]$CAMPUS_MAC_TYPE }
 }
 
 function Say([string]$m) { Write-Host ("{0} {1}" -f (Get-Date -Format 'HH:mm:ss'), $m) }
@@ -300,7 +308,7 @@ foreach ($base in $bases) {
         '--data-urlencode', "wlan_user_mac=$umac",
         '--data-urlencode', "wlan_ac_ip=$acip",
         '--data-urlencode', "wlan_ac_name=$acname",
-        '--data-urlencode', 'mac_type=0',
+        '--data-urlencode', "mac_type=$MacType",
         '--data-urlencode', 'jsVersion=4.1') -Label 'cas/create' -Referer $redir
     $create = BodyText
     $st     = Status

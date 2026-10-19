@@ -75,6 +75,11 @@ PASSWORD="${CAMPUS_PASS:-}"
 FORCE_REDIRECT="${CAMPUS_REDIRECT:-}"
 PROBE="${CAMPUS_PROBE:-http://connect.rom.miui.com/generate_204}"
 PORTAL="${CAMPUS_PORTAL:-https://rz.hstc.edu.cn}"
+# Terminal type reported to the portal: 1 = phone, 0 = anything else.
+# The page computes mac_type = (term.type == 2 ? 1 : 0), where term.type is
+# 1 PC / 2 phone / 3 tablet, and the value is carried into the CAS "state"
+# (second field), which is what the self-service backend displays.
+MAC_TYPE="${CAMPUS_MAC_TYPE:-1}"
 EP_HTTP_PORT="${CAMPUS_EP_HTTP_PORT:-801}"
 EP_HTTPS_PORT="${CAMPUS_EP_HTTPS_PORT:-802}"
 CAS_BASE="${CAMPUS_CAS:-https://hscas.hstc.edu.cn/cas}"
@@ -309,7 +314,7 @@ for base in "http://$PHOST:$EP_HTTP_PORT/eportal/portal" \
       --data-urlencode "wlan_user_mac=$UMAC" \
       --data-urlencode "wlan_ac_ip=$ACIP" \
       --data-urlencode "wlan_ac_name=$ACNAME" \
-      --data-urlencode "mac_type=0" \
+      --data-urlencode "mac_type=$MAC_TYPE" \
       --data-urlencode "jsVersion=4.1" 2>"$WORK/create.err")"
     [ -s "$WORK/create.hdr" ] || { log "  -> unreachable, skipping"; continue; }
     CREATE="$(cat "$WORK/create.body" 2>/dev/null)"
