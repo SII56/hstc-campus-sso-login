@@ -277,11 +277,10 @@ init_conf(){
 # flags in a child process, so the prompts (password / SMS code) keep working.
 menu_loop(){
   local self="$SELF_DIR/$(basename "$0")"
-  # Carry the chosen terminal type down to the child so what the status bar
-  # shows is what the login actually sends.
   local typeflag=""
-  case "$MAC_TYPE" in 0) typeflag="--pc" ;; 1) typeflag="--mp" ;; esac
   while :; do
+    # Recomputed every round so the switch below takes effect immediately.
+    case "$MAC_TYPE" in 0) typeflag="--pc" ;; 1) typeflag="--mp" ;; *) typeflag="" ;; esac
     printf '\n  hstc-campus-sso-login\n  --------------------------------------------------\n'
     if online 2>/dev/null; then printf '   network : ONLINE\n'
     else printf '   network : offline (not authenticated)\n'; fi
@@ -297,6 +296,7 @@ menu_loop(){
     printf '   3) check status\n'
     printf '   4) logout\n'
     printf '   5) re-authenticate      (logout, then login again)\n'
+    printf '   6) switch device type   (now: %s)\n' "$( [ "$MAC_TYPE" = 1 ] && echo phone || echo PC )"
     printf '   7) create campus.conf  (saves your password to disk)\n'
     printf '   h) all options\n'
     printf '   0) quit\n\n'
@@ -308,6 +308,8 @@ menu_loop(){
       3) CAMPUS_MENU=0 "$self" --check ;;
       4) CAMPUS_MENU=0 "$self" --logout ;;
       5) CAMPUS_MENU=0 "$self" --logout && CAMPUS_MENU=0 "$self" --login $typeflag ;;
+      6) if [ "$MAC_TYPE" = 1 ]; then MAC_TYPE=0; else MAC_TYPE=1; fi
+         continue ;;
       7) CAMPUS_MENU=0 "$self" --init ;;
       h|help) CAMPUS_MENU=0 "$self" --help ;;
       0|q|quit) return 0 ;;

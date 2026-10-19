@@ -276,9 +276,10 @@ function Show-Menu {
     $self = $PSCommandPath
     # Carry the chosen terminal type down to the child so what the status bar
     # shows is what the login actually sends.
-    $typeArg = @()
-    if ($Pc) { $typeArg = @('-Pc') } elseif ($Mp) { $typeArg = @('-Mp') }
     while ($true) {
+        # Recomputed every round so the switch below takes effect immediately.
+        $typeArg = @()
+        if ($MacType -eq 1) { $typeArg = @('-Mp') } elseif ($MacType -eq 0) { $typeArg = @('-Pc') }
         Write-Host ''
         Write-Host '  hstc-campus-sso-login'
         Write-Host '  --------------------------------------------------'
@@ -296,12 +297,17 @@ function Show-Menu {
         Write-Host '   3) check status'
         Write-Host '   4) logout'
         Write-Host '   5) re-authenticate      (logout, then login again)'
+        Write-Host ("   6) switch device type   (now: {0})" -f $(if ($MacType -eq 1) { 'phone' } else { 'PC' }))
         Write-Host '   7) create campus.conf.ps1  (saves your password to disk)'
         Write-Host '   h) all options'
         Write-Host '   0) quit'
         Write-Host ''
         $pick = Read-Host '  choice'
         if ($pick -eq '0') { return }
+        if ($pick -eq '6') {
+            if ($MacType -eq 1) { $MacType = 0 } else { $MacType = 1 }
+            continue
+        }
         switch ($pick) {
             '1' { & $self -Login @typeArg }
             '2' { & $self -Sms @typeArg }
