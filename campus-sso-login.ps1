@@ -216,16 +216,16 @@ $Interactive = -not [Console]::IsInputRedirected
 
 if ($Help) {
     Write-Host ''
-    Write-Host '  usage: .\campus-sso-login.cmd [options]'
+    Write-Host '  usage: .\\campus-sso-login.cmd [option]'
     Write-Host ''
-    Write-Host '    -Check        only report the online state'
-    Write-Host '    -Sms <mobile> log in with an SMS code sent to your phone'
-    Write-Host '    -DryRun       walk the chain but never submit a password'
-    Write-Host '    -Logout       log out (unbind MAC, then CAS sign-off)'
-    Write-Host '    -Force        ignore the online state'
-    Write-Host '    -Menu         force the interactive menu'
-    Write-Host ''
-    Write-Host '  Run with no options in a console to get the menu.'
+    Write-Host '    (no option)     log in; skip if already online'
+    Write-Host '    -Menu           interactive menu'
+    Write-Host '    -Sms <mobile>   log in with an SMS code sent to your phone'
+    Write-Host '    -Check          only report the online state'
+    Write-Host '    -Logout         log out (unbind MAC, then CAS sign-off)'
+    Write-Host '    -Force          ignore the online state'
+    Write-Host '    -DryRun         walk the chain but never submit a password'
+    Write-Host '    -Help           show this list'
     Write-Host ''
     Bye 0
 }
@@ -266,7 +266,7 @@ function Show-Menu {
     }
 }
 
-if ($Menu -or ($PSBoundParameters.Count -eq 0 -and $Interactive)) {
+if ($Menu) {
     Show-Menu
     Bye 0
 }

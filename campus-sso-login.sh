@@ -89,10 +89,23 @@ LOG="${CAMPUS_LOG:-/tmp/campus-sso-login.log}"
 PAGE_PROGRAM=""      # filled in from loadConfig on demand
 PAGE_INDEX=""
 
+usage(){
+  cat <<'USAGE'
+usage: ./campus-sso-login.sh [option]
+
+  (no option)     log in; skip if already online
+  --menu          interactive menu
+  --sms [mobile]  log in with an SMS code sent to your phone
+  --check         only report the online state
+  --logout        log out (unbind MAC, then CAS sign-off)
+  --force         ignore the online state
+  --dry-run       walk the chain but never submit a password
+  -h, --help      show this list
+USAGE
+}
+
 CHECK=0; FORCE=0; DRY=0; LOGOUT=0; SMS=0; SMS_MOBILE=""; MENU=0
-# No arguments and a terminal => show the menu. Anything else keeps the old
-# non-interactive behaviour, so timers and systemd units are unaffected.
-[ $# -eq 0 ] && [ -t 0 ] && MENU=1
+# The menu is opt-in (--menu). With no arguments the script logs in, as before.
 [ "${CAMPUS_MENU:-0}" = 1 ] && MENU=1
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -111,7 +124,7 @@ while [ $# -gt 0 ]; do
       esac
       continue
       ;;
-    -h|--help) awk 'NR>1 && /^set -u/{exit} NR>1{print}' "$0"; exit 0 ;;
+    -h|--help) usage; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
   shift
