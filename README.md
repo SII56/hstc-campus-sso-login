@@ -19,7 +19,8 @@ powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1
 
 ```powershell
 # 只看在不在线
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Check 
+powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Check
+powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Sms 138xxxxxxxx 
 # 走完整条链路，但不提交密码
 powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -DryRun
 # 注销 
@@ -50,6 +51,7 @@ chmod +x campus-sso-login.sh
 ```bash
 # 只看在不在线
 ./campus-sso-login.sh --check
+./campus-sso-login.sh --sms 138xxxxxxxx   # 短信登录（验证码会发到你手机）
 # 走完整条链路，但不提交密码
 ./campus-sso-login.sh --dry-run
 # 注销

@@ -52,6 +52,9 @@
 #                                    you are never left stranded offline
 #   ./campus-sso-login.sh --force    ignore the online state
 #   ./campus-sso-login.sh --dry-run  walk the chain, never submit a password
+#   ./campus-sso-login.sh --sms 138xxxxxxxx
+#                                    log in with an SMS code instead of a password
+#                                    (interactive: the code is sent to your phone)
 #
 # Configuration: campus.conf next to this script, or environment variables
 #   CAMPUS_USER / CAMPUS_PASS. Credentials are only requested when the CAS login
@@ -81,16 +84,28 @@ LOG="${CAMPUS_LOG:-/tmp/campus-sso-login.log}"
 PAGE_PROGRAM=""      # filled in from loadConfig on demand
 PAGE_INDEX=""
 
-CHECK=0; FORCE=0; DRY=0; LOGOUT=0; RELOGIN=0
-for arg in "$@"; do case "$arg" in
-  --check)   CHECK=1 ;;
-  --logout)  LOGOUT=1 ;;
-  --relogin) RELOGIN=1 ;;
-  --force)   FORCE=1 ;;
-  --dry-run) DRY=1; FORCE=1 ;;
-  -h|--help) awk 'NR>1 && /^set -u/{exit} NR>1{print}' "$0"; exit 0 ;;
-  *) echo "unknown option: $arg" >&2; exit 2 ;;
-esac; done
+CHECK=0; FORCE=0; DRY=0; LOGOUT=0; RELOGIN=0; SMS=0; SMS_MOBILE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --check)   CHECK=1 ;;
+    --logout)  LOGOUT=1 ;;
+    --relogin) RELOGIN=1 ;;
+    --force)   FORCE=1 ;;
+    --dry-run) DRY=1; FORCE=1 ;;
+    --sms)
+      SMS=1
+      shift
+      case "${1:-}" in
+        ""|--*) ;;
+        *) SMS_MOBILE="$1"; shift ;;
+      esac
+      continue
+      ;;
+    -h|--help) awk 'NR>1 && /^set -u/{exit} NR>1{print}' "$0"; exit 0 ;;
+    *) echo "unknown option: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
 
 log(){ printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG"; }
 die(){ log "ERROR: $*"; exit 1; }
@@ -350,6 +365,66 @@ EXEC="$(printf '%s' "$CAS_PAGE" | tr '>' '\n' \
         | sed -n 's/.*value="\([^"]*\)".*/\1/p' | LC_ALL=C grep -v '\$' | head -1)"
 [ -n "$EXEC" ] || die "no execution token (page saved at $WORK/cas-login.html)"
 log "execution: ${EXEC:0:32}..."
+
+# ---------------------------------------------------------------- 4a. SMS login
+# The SMS code is delivered to the phone, so this path is interactive by nature.
+# Flow: POST /cas/passwordlessTokenSend (username=<mobile>), then submit the fm2
+# form with _eventId=submitPasswordlessToken and the code in the "password" field.
+if [ "$SMS" = 1 ]; then
+  if [ -z "$SMS_MOBILE" ] && [ -t 0 ]; then
+    printf 'Mobile number: ' >&2
+    read -r SMS_MOBILE
+  fi
+  [ -n "$SMS_MOBILE" ] || die "no mobile number given"
+
+  if [ "$DRY" = 1 ]; then
+    log "dry-run: reached the SMS branch, would send a code to $SMS_MOBILE and stop"
+    exit 0
+  fi
+
+  log "requesting an SMS code for $SMS_MOBILE"
+  rm -f "$WORK/sms.body" "$WORK/sms.err"
+  SEND="$(curl -sS --connect-timeout 5 -m 15 -A "$UA" -b "$JAR" -c "$JAR" \
+        -H "Referer: $AUTHZ" -H "X-Requested-With: XMLHttpRequest" \
+        -o "$WORK/sms.body" -X POST "$CAS_BASE/passwordlessTokenSend" \
+        --data-urlencode "username=$SMS_MOBILE" 2>"$WORK/sms.err")"
+  SEND="$(cat "$WORK/sms.body" 2>/dev/null)"
+  log "passwordlessTokenSend -> $SEND"
+  [ -s "$WORK/sms.err" ] && log "  curl: $(tr -d '\n' < "$WORK/sms.err")"
+  case "$SEND" in
+    *'"error"'*) die "the portal refused to send a code: $SEND" ;;
+  esac
+
+  printf 'SMS code from your phone: ' >&2
+  read -r SMS_CODE
+  [ -n "$SMS_CODE" ] || die "no SMS code entered"
+
+  HDR="$WORK/post.hdr"; OUT="$WORK/post.html"
+  rm -f "$HDR" "$OUT" "$WORK/post.err"
+  curl -sS --connect-timeout 5 -m 25 -A "$UA" -b "$JAR" -c "$JAR" -L --max-redirs 10 \
+    -H "Referer: $AUTHZ" -H "Origin: ${CAS_BASE%/cas}" \
+    -D "$HDR" -o "$OUT" 2>"$WORK/post.err" \
+    --data-urlencode "username=$SMS_MOBILE" \
+    --data-urlencode "password=$SMS_CODE" \
+    --data-urlencode "captcha=" \
+    --data-urlencode "currentMenu=2" \
+    --data-urlencode "_eventId=submitPasswordlessToken" \
+    --data-urlencode "execution=$EXEC" \
+    --data-urlencode "geolocation=" \
+    --data-urlencode "failN=-1" \
+    "$AUTHZ"
+
+  [ -s "$WORK/post.err" ] && log "post curl said: $(tr -d '\n' < "$WORK/post.err")"
+  if LC_ALL=C grep -qi 'ticket=ST-' "$HDR"; then
+    log "CAS issued a ticket"
+  else
+    log "no ticket seen (see $OUT)"
+  fi
+  sleep 2
+  if online; then log "login OK, network is up"; exit 0; fi
+  log "still offline. dumps: $HDR  $OUT"
+  exit 2
+fi
 
 # ---------------------------------------------------------------- 4. RSA encrypt
 # Reaching this point means CAS really wants the login form filled in, so this

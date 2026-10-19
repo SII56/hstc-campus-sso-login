@@ -23,7 +23,9 @@ param(
     [switch]$Force,
     [switch]$DryRun,
     [switch]$Check,
-    [switch]$Logout
+    [switch]$Logout,
+    [switch]$Sms,
+    [string]$Mobile = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -366,6 +368,58 @@ if (-not $m.Success) {
 }
 $exec = $m.Groups[1].Value
 Say ("execution: " + $exec.Substring(0, [Math]::Min(32, $exec.Length)) + '...')
+
+# ---------------------------------------------------------------- 4a. SMS login
+# The code is delivered to the phone, so this path is interactive by nature.
+# Flow: POST /cas/passwordlessTokenSend (username=<mobile>), then submit the fm2
+# form with _eventId=submitPasswordlessToken and the code in the "password" field.
+if ($Sms) {
+    $mob = $Mobile
+    if (-not $mob -and $Interactive) { $mob = (Read-Host 'Mobile number').Trim() }
+    if (-not $mob) { Die 'no mobile number given (-Sms 138xxxxxxxx)' }
+
+    if ($DryRun) {
+        Say "dry-run: reached the SMS branch, would send a code to $mob and stop"
+        Bye 0
+    }
+
+    Say "requesting an SMS code for $mob"
+    RunCurl -Extra @('-X', 'POST', "$CasBase/passwordlessTokenSend",
+        '-H', 'X-Requested-With: XMLHttpRequest',
+        '--data-urlencode', "username=$mob") -Label 'passwordlessTokenSend' -Referer $authz
+    $send = BodyText
+    Say "passwordlessTokenSend -> $send"
+    if ($script:CurErr) { Say ("  curl: " + $script:CurErr) }
+    if ($send -match '"error"') { Die "the portal refused to send a code: $send" }
+
+    $smsCode = Read-Host 'SMS code from your phone'
+    if (-not $smsCode) { Die 'no SMS code entered' }
+
+    RunCurl -Extra @('-L', '--max-redirs', '10',
+        '-H', ("Origin: " + ($CasBase -replace '/cas$', '')),
+        '--data-urlencode', "username=$mob",
+        '--data-urlencode', "password=$smsCode",
+        '--data-urlencode', 'captcha=',
+        '--data-urlencode', 'currentMenu=2',
+        '--data-urlencode', '_eventId=submitPasswordlessToken',
+        '--data-urlencode', "execution=$exec",
+        '--data-urlencode', 'geolocation=',
+        '--data-urlencode', 'failN=-1',
+        $authz) -Label 'sms login' -Referer $authz
+
+    $smsBody = BodyText
+    if ($script:CurErr) { Say ("  curl: " + $script:CurErr) }
+    $allHdr = Get-Content $Hdr -Raw -ErrorAction SilentlyContinue
+    if ($allHdr -match 'ticket=ST-') { Say 'CAS issued a ticket' }
+    else { Say 'no ticket seen (see last.hdr)' }
+    if ($smsBody -and $smsBody.Length -gt 300) { $smsBody = $smsBody.Substring(0, 300) }
+    if ($smsBody) { Say ("  body: " + $smsBody) }
+
+    Start-Sleep -Seconds 2
+    if (Test-Online) { Say 'login OK, network is up'; Bye 0 }
+    Say 'still offline'
+    Bye 2
+}
 
 # ---------------------------------------------------------------- 4. RSA encrypt
 RunCurl -Extra @("$CasBase/jwt/publicKey") -Label 'public key'
