@@ -11,23 +11,26 @@ cd hstc-campus-sso-login
 
 ## Windows
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1
+直接运行包装器就行（它会自动绕过 PowerShell 的脚本执行限制，不改系统设置、不需要管理员）：
+
+```
+campus-sso-login.cmd
 ```
 
-会提示输入学号和密码（密码不回显）。其它参数：
+不带参数会显示菜单，选 1 登录。也可以直接带参数：
 
-```powershell
-# 只看在不在线
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Check
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Sms 138xxxxxxxx 
-# 走完整条链路，但不提交密码
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -DryRun
-# 注销 
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Logout
-# 忽略在线状态，强制认证
-powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1 -Force
 ```
+campus-sso-login.cmd -Check            # 只看在不在线
+campus-sso-login.cmd -Sms 138xxxxxxxx  # 短信登录（验证码发到手机）
+campus-sso-login.cmd -DryRun           # 走完整条链路，但不提交密码
+campus-sso-login.cmd -Logout           # 注销
+campus-sso-login.cmd -Force            # 忽略在线状态，强制认证
+```
+
+会提示输入学号和密码（密码不回显）。
+
+> 直接调 `.ps1` 的话会被执行策略拦住，需要自己加参数：
+> `powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1`
 
 需要 Windows 10 1803 以上（要用系统自带的 `curl.exe`）和 PowerShell 5.1 以上。
 
