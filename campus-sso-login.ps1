@@ -27,7 +27,8 @@ param(
     [switch]$Sms,
     [string]$Mobile = '',
     [switch]$Menu,
-    [switch]$Login
+    [switch]$Login,
+    [switch]$Help
 )
 
 $ErrorActionPreference = 'Stop'
@@ -212,6 +213,23 @@ function Do-Logout {
 if ($Logout) { Do-Logout }
 $Interactive = -not [Console]::IsInputRedirected
 
+
+if ($Help) {
+    Write-Host ''
+    Write-Host '  usage: .\campus-sso-login.cmd [options]'
+    Write-Host ''
+    Write-Host '    -Check        only report the online state'
+    Write-Host '    -Sms <mobile> log in with an SMS code sent to your phone'
+    Write-Host '    -DryRun       walk the chain but never submit a password'
+    Write-Host '    -Logout       log out (unbind MAC, then CAS sign-off)'
+    Write-Host '    -Force        ignore the online state'
+    Write-Host '    -Menu         force the interactive menu'
+    Write-Host ''
+    Write-Host '  Run with no options in a console to get the menu.'
+    Write-Host ''
+    Bye 0
+}
+
 # ---------------------------------------------------------------- 0. menu
 # Same idea as the shell script: each entry re-runs this script with the
 # equivalent switch in a child process, so the prompts keep working.
@@ -219,7 +237,7 @@ function Show-Menu {
     $self = $PSCommandPath
     while ($true) {
         Write-Host ''
-        Write-Host '  campus-sso-login'
+        Write-Host '  hstc-campus-sso-login'
         Write-Host '  --------------------------------------------------'
         if (Test-Online) { Write-Host '   network : ONLINE' }
         else             { Write-Host '   network : offline (not authenticated)' }
@@ -229,11 +247,11 @@ function Show-Menu {
         Write-Host '   2) login with an SMS code'
         Write-Host '   3) check status'
         Write-Host '   4) logout'
-        Write-Host '   5) logout, then log back in'
-        Write-Host '   6) force re-authenticate'
+        Write-Host '   5) re-authenticate      (logout, then login again)'
+        Write-Host '   h) all options'
         Write-Host '   0) quit'
         Write-Host ''
-        $pick = Read-Host '  choice [0-6]'
+        $pick = Read-Host '  choice'
         if ($pick -eq '0') { return }
         switch ($pick) {
             '1' { & $self -Login }
@@ -241,7 +259,7 @@ function Show-Menu {
             '3' { & $self -Check }
             '4' { & $self -Logout }
             '5' { & $self -Logout; & $self -Login }
-            '6' { & $self -Login -Force }
+            'h' { & $self -Help }
             default { Write-Host '  not an option'; continue }
         }
         $null = Read-Host '  ---- press Enter to return to the menu ----'

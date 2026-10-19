@@ -50,9 +50,6 @@
 #                                    from a terminal)
 #   ./campus-sso-login.sh --check    only report the online state
 #   ./campus-sso-login.sh --logout   log out (unbind MAC, then CAS sign-off)
-#   ./campus-sso-login.sh --logout --relogin
-#                                    ... and log straight back in afterwards, so
-#                                    you are never left stranded offline
 #   ./campus-sso-login.sh --force    ignore the online state
 #   ./campus-sso-login.sh --dry-run  walk the chain, never submit a password
 #   ./campus-sso-login.sh --sms 138xxxxxxxx
@@ -92,7 +89,7 @@ LOG="${CAMPUS_LOG:-/tmp/campus-sso-login.log}"
 PAGE_PROGRAM=""      # filled in from loadConfig on demand
 PAGE_INDEX=""
 
-CHECK=0; FORCE=0; DRY=0; LOGOUT=0; RELOGIN=0; SMS=0; SMS_MOBILE=""; MENU=0
+CHECK=0; FORCE=0; DRY=0; LOGOUT=0; SMS=0; SMS_MOBILE=""; MENU=0
 # No arguments and a terminal => show the menu. Anything else keeps the old
 # non-interactive behaviour, so timers and systemd units are unaffected.
 [ $# -eq 0 ] && [ -t 0 ] && MENU=1
@@ -103,7 +100,6 @@ while [ $# -gt 0 ]; do
     --login)   : ;;
     --check)   CHECK=1 ;;
     --logout)  LOGOUT=1 ;;
-    --relogin) RELOGIN=1 ;;
     --force)   FORCE=1 ;;
     --dry-run) DRY=1; FORCE=1 ;;
     --sms)
@@ -226,14 +222,7 @@ logout_now(){
   return 0
 }
 
-if [ "$LOGOUT" = 1 ]; then
-  logout_now; rc=$?
-  if [ "$RELOGIN" = 1 ]; then
-    log "logging back in (--relogin)"
-    "$SELF_DIR/campus-sso-login.sh" --force
-  fi
-  exit $rc
-fi
+if [ "$LOGOUT" = 1 ]; then logout_now; exit $?; fi
 
 # ---------------------------------------------------------------- 0. menu
 # A thin wrapper: every entry just re-runs this script with the equivalent
@@ -241,7 +230,7 @@ fi
 menu_loop(){
   local self="$SELF_DIR/$(basename "$0")"
   while :; do
-    printf '\n  campus-sso-login\n  --------------------------------------------------\n'
+    printf '\n  hstc-campus-sso-login\n  --------------------------------------------------\n'
     if online 2>/dev/null; then printf '   network : ONLINE\n'
     else printf '   network : offline (not authenticated)\n'; fi
     printf '   portal  : %s\n' "$PORTAL"
@@ -250,18 +239,18 @@ menu_loop(){
     printf '   2) login with an SMS code\n'
     printf '   3) check status\n'
     printf '   4) logout\n'
-    printf '   5) logout, then log back in\n'
-    printf '   6) force re-authenticate\n'
+    printf '   5) re-authenticate      (logout, then login again)\n'
+    printf '   h) all options\n'
     printf '   0) quit\n\n'
-    printf '  choice [0-6]: '
+    printf '  choice: '
     read -r pick || return 1
     case "$pick" in
       1) CAMPUS_MENU=0 "$self" --login ;;
       2) CAMPUS_MENU=0 "$self" --sms ;;
       3) CAMPUS_MENU=0 "$self" --check ;;
       4) CAMPUS_MENU=0 "$self" --logout ;;
-      5) CAMPUS_MENU=0 "$self" --logout --relogin ;;
-      6) CAMPUS_MENU=0 "$self" --login --force ;;
+      5) CAMPUS_MENU=0 "$self" --logout && CAMPUS_MENU=0 "$self" --login ;;
+      h|help) CAMPUS_MENU=0 "$self" --help ;;
       0|q|quit) return 0 ;;
       *) printf '  not an option\n' >&2 ;;
     esac
