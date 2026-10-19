@@ -17,14 +17,16 @@ cd hstc-campus-sso-login
 campus-sso-login.cmd
 ```
 
-不带参数会显示菜单，选 1 登录。也可以直接带参数：
+不带参数就是登录（已在线会跳过）。想要菜单就加 `-Menu`：
 
 ```
+campus-sso-login.cmd -Menu             # 菜单
 campus-sso-login.cmd -Check            # 只看在不在线
 campus-sso-login.cmd -Sms 138xxxxxxxx  # 短信登录（验证码发到手机）
 campus-sso-login.cmd -DryRun           # 走完整条链路，但不提交密码
 campus-sso-login.cmd -Logout           # 注销
 campus-sso-login.cmd -Force            # 忽略在线状态，强制认证
+campus-sso-login.cmd -Help             # 列出全部选项
 ```
 
 会提示输入学号和密码（密码不回显）。
@@ -52,6 +54,8 @@ chmod +x campus-sso-login.sh
 ```
 会提示输入学号和密码（密码不回显）。其它参数：
 ```bash
+# 菜单
+./campus-sso-login.sh --menu
 # 只看在不在线
 ./campus-sso-login.sh --check
 ./campus-sso-login.sh --sms 138xxxxxxxx   # 短信登录（验证码会发到你手机）
