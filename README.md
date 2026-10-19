@@ -46,13 +46,6 @@ campus-sso-login.cmd -Help             # 列出全部选项
 ./campus-sso-login.sh
 ```
 
-如果报 `Permission denied`，说明可执行位丢了（下载 ZIP 会出现，`git clone` 不会）。二选一：
-
-```bash
-chmod +x campus-sso-login.sh   # 补上可执行权限
-bash campus-sso-login.sh       # 或者直接用 bash 调用，效果完全一样
-```
-
 会提示输入学号和密码（密码不回显）。其它参数：
 ```bash
 # 菜单
@@ -77,7 +70,7 @@ bash campus-sso-login.sh       # 或者直接用 bash 调用，效果完全一�
 ./campus-sso-login.sh --init
 ```
 
-写入 `campus.conf` 并自动设成 `600` 权限；已存在时会先问你确认。
+写入 `campus.conf` 并自动设成 `600` 权限；已存在时需要手动确认。
 Windows 上是 `campus-sso-login.cmd -Init`，写入 `campus.conf.ps1`。
 
 也可以手动改：
@@ -93,12 +86,10 @@ vi campus.conf
 > 只有 CAS 真的要你填登录表单时才会问密码。如果 CAS 已经认得这台机器（IP 级 SSO），
 > 它会直接发 ticket，全程不需要密码。
 
-**不用 `campus.conf` 时脚本不保存任何密码**：密码只在这个进程的内存里，从 stdin
-交给 curl，不会出现在 `ps` 的命令行里；`cookies.txt`（可能含 CAS 会话 cookie）
+**不用 `campus.conf` 时脚本不保存任何密码**：密码只在这个进程的内存里，从 stdin 交给 curl，不会出现在 `ps` 的命令行里；`cookies.txt`（可能含 CAS 会话 cookie）
 退出时自动删除，工作目录权限 700。
 
 用了 `--init` 就会把密码**明文**写进 `campus.conf`（`600` 权限、已在 `.gitignore` 里）。
-要不要这个便利，你自己权衡——只是想临时登录的话，直接运行、按提示输入就行。
 
 ## 出问题看这里
 
