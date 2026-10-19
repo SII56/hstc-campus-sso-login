@@ -37,12 +37,6 @@ campus-sso-login.cmd -Help             # 列出全部选项
 
 需要 Windows 10 1803 以上（要用系统自带的 `curl.exe`）和 PowerShell 5.1 以上。
 
-不想每次输密码，就在脚本同目录建一个 `campus.conf.ps1`：
-
-```powershell
-$CAMPUS_USER = "202412345678"
-$CAMPUS_PASS = "your-password"
-```
 
 ## Linux / macOS
 先添加权限
