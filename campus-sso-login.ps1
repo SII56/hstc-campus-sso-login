@@ -29,7 +29,8 @@ param(
     [switch]$Menu,
     [switch]$Login,
     [switch]$Help,
-    [switch]$Init
+    [switch]$Init,
+    [int]$Type = -1
 )
 
 $ErrorActionPreference = 'Stop'
@@ -215,6 +216,11 @@ if ($Logout) { Do-Logout }
 $Interactive = -not [Console]::IsInputRedirected
 
 
+if ($Type -ge 0) {
+    if ($Type -gt 3) { Die 'Type must be 0-3' }
+    $MacType = $Type
+}
+
 # ---------------------------------------------------------------- init
 function Esc-Dq([string]$v) {
     return $v.Replace('`', '``').Replace('"', '`"').Replace('$', '`$')
@@ -253,6 +259,7 @@ if ($Help) {
     Write-Host '    -Menu           interactive menu'
     Write-Host '    -Sms <mobile>   log in with an SMS code sent to your phone'
     Write-Host '    -Check          only report the online state'
+    Write-Host '    -Type <0-3>     terminal type reported to the portal (default 1 = phone)'
     Write-Host '    -Init           create campus.conf.ps1 (writes your password to disk)'
     Write-Host '    -Logout         log out (unbind MAC, then CAS sign-off)'
     Write-Host '    -Force          ignore the online state'
