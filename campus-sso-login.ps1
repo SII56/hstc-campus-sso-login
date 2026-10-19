@@ -25,7 +25,9 @@ param(
     [switch]$Check,
     [switch]$Logout,
     [switch]$Sms,
-    [string]$Mobile = ''
+    [string]$Mobile = '',
+    [switch]$Menu,
+    [switch]$Login
 )
 
 $ErrorActionPreference = 'Stop'
@@ -211,6 +213,47 @@ if ($Logout) { Do-Logout }
 if (-not $Force -and (Test-Online)) { Say 'Already online, nothing to do'; Bye 0 }
 if ($Check) { Say 'Not online'; Bye 1 }
 if ($DryRun) { $Force = $true }
+
+# ---------------------------------------------------------------- 0. menu
+# Same idea as the shell script: each entry re-runs this script with the
+# equivalent switch in a child process, so the prompts keep working.
+function Show-Menu {
+    $self = $PSCommandPath
+    while ($true) {
+        Write-Host ''
+        Write-Host '  campus-sso-login'
+        Write-Host '  --------------------------------------------------'
+        if (Test-Online) { Write-Host '   network : ONLINE' }
+        else             { Write-Host '   network : offline (not authenticated)' }
+        Write-Host ("   portal  : {0}" -f $Portal)
+        Write-Host '  --------------------------------------------------'
+        Write-Host '   1) login                (skip if already online)'
+        Write-Host '   2) login with an SMS code'
+        Write-Host '   3) check status'
+        Write-Host '   4) logout'
+        Write-Host '   5) logout, then log back in'
+        Write-Host '   6) force re-authenticate'
+        Write-Host '   0) quit'
+        Write-Host ''
+        $pick = Read-Host '  choice [0-6]'
+        if ($pick -eq '0') { return }
+        switch ($pick) {
+            '1' { & $self -Login }
+            '2' { & $self -Sms }
+            '3' { & $self -Check }
+            '4' { & $self -Logout }
+            '5' { & $self -Logout; & $self -Login }
+            '6' { & $self -Login -Force }
+            default { Write-Host '  not an option'; continue }
+        }
+        $null = Read-Host '  ---- press Enter to return to the menu ----'
+    }
+}
+
+if ($Menu -or ($PSBoundParameters.Count -eq 0 -and $Interactive)) {
+    Show-Menu
+    Bye 0
+}
 
 $Interactive = -not [Console]::IsInputRedirected
 if (-not $User -and $Interactive) {

@@ -45,6 +45,9 @@
 #
 # Usage:
 #   ./campus-sso-login.sh            login if not already online
+#   ./campus-sso-login.sh --menu     force the interactive menu (also shown
+#                                    automatically when run with no arguments
+#                                    from a terminal)
 #   ./campus-sso-login.sh --check    only report the online state
 #   ./campus-sso-login.sh --logout   log out (unbind MAC, then CAS sign-off)
 #   ./campus-sso-login.sh --logout --relogin
@@ -89,9 +92,15 @@ LOG="${CAMPUS_LOG:-/tmp/campus-sso-login.log}"
 PAGE_PROGRAM=""      # filled in from loadConfig on demand
 PAGE_INDEX=""
 
-CHECK=0; FORCE=0; DRY=0; LOGOUT=0; RELOGIN=0; SMS=0; SMS_MOBILE=""
+CHECK=0; FORCE=0; DRY=0; LOGOUT=0; RELOGIN=0; SMS=0; SMS_MOBILE=""; MENU=0
+# No arguments and a terminal => show the menu. Anything else keeps the old
+# non-interactive behaviour, so timers and systemd units are unaffected.
+[ $# -eq 0 ] && [ -t 0 ] && MENU=1
+[ "${CAMPUS_MENU:-0}" = 1 ] && MENU=1
 while [ $# -gt 0 ]; do
   case "$1" in
+    --menu)    MENU=1 ;;
+    --login)   : ;;
     --check)   CHECK=1 ;;
     --logout)  LOGOUT=1 ;;
     --relogin) RELOGIN=1 ;;
@@ -226,8 +235,48 @@ if [ "$LOGOUT" = 1 ]; then
   exit $rc
 fi
 
+# ---------------------------------------------------------------- 0. menu
+# A thin wrapper: every entry just re-runs this script with the equivalent
+# flags in a child process, so the prompts (password / SMS code) keep working.
+menu_loop(){
+  local self="$SELF_DIR/$(basename "$0")"
+  while :; do
+    printf '\n  campus-sso-login\n  --------------------------------------------------\n'
+    if online 2>/dev/null; then printf '   network : ONLINE\n'
+    else printf '   network : offline (not authenticated)\n'; fi
+    printf '   portal  : %s\n' "$PORTAL"
+    printf '  --------------------------------------------------\n'
+    printf '   1) login                (skip if already online)\n'
+    printf '   2) login with an SMS code\n'
+    printf '   3) check status\n'
+    printf '   4) logout\n'
+    printf '   5) logout, then log back in\n'
+    printf '   6) force re-authenticate\n'
+    printf '   0) quit\n\n'
+    printf '  choice [0-6]: '
+    read -r pick || return 1
+    case "$pick" in
+      1) CAMPUS_MENU=0 "$self" --login ;;
+      2) CAMPUS_MENU=0 "$self" --sms ;;
+      3) CAMPUS_MENU=0 "$self" --check ;;
+      4) CAMPUS_MENU=0 "$self" --logout ;;
+      5) CAMPUS_MENU=0 "$self" --logout --relogin ;;
+      6) CAMPUS_MENU=0 "$self" --login --force ;;
+      0|q|quit) return 0 ;;
+      *) printf '  not an option\n' >&2 ;;
+    esac
+    printf '\n  ---- press Enter to return to the menu ----' >&2
+    read -r _ || return 1
+  done
+}
+
+if [ "$MENU" = 1 ]; then menu_loop; exit $?; fi
+
+if [ "$CHECK" = 1 ]; then
+  if online; then log "online"; exit 0; fi
+  log "not online"; exit 1
+fi
 if [ "$FORCE" = 0 ] && online; then log "already online, nothing to do"; exit 0; fi
-if [ "$CHECK" = 1 ]; then log "not online"; exit 1; fi
 
 # Credentials are deliberately NOT collected here: cas/create does not need
 # them. They are only requested further down, if CAS really serves a login form.
