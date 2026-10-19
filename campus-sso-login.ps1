@@ -274,6 +274,10 @@ if ($Help) {
 # equivalent switch in a child process, so the prompts keep working.
 function Show-Menu {
     $self = $PSCommandPath
+    # Carry the chosen terminal type down to the child so what the status bar
+    # shows is what the login actually sends.
+    $typeArg = @()
+    if ($Pc) { $typeArg = @('-Pc') } elseif ($Mp) { $typeArg = @('-Mp') }
     while ($true) {
         Write-Host ''
         Write-Host '  hstc-campus-sso-login'
@@ -281,6 +285,11 @@ function Show-Menu {
         if (Test-Online) { Write-Host '   network : ONLINE' }
         else             { Write-Host '   network : offline (not authenticated)' }
         Write-Host ("   portal  : {0}" -f $Portal)
+        switch ($MacType) {
+            1       { Write-Host '   device  : phone  (2 slots)' }
+            0       { Write-Host '   device  : PC     (1 slot)' }
+            default { Write-Host ("   device  : type {0} (unverified)" -f $MacType) }
+        }
         Write-Host '  --------------------------------------------------'
         Write-Host '   1) login                (skip if already online)'
         Write-Host '   2) login with an SMS code'
@@ -294,11 +303,11 @@ function Show-Menu {
         $pick = Read-Host '  choice'
         if ($pick -eq '0') { return }
         switch ($pick) {
-            '1' { & $self -Login }
-            '2' { & $self -Sms }
+            '1' { & $self -Login @typeArg }
+            '2' { & $self -Sms @typeArg }
             '3' { & $self -Check }
             '4' { & $self -Logout }
-            '5' { & $self -Logout; & $self -Login }
+            '5' { & $self -Logout; & $self -Login @typeArg }
             '7' { & $self -Init }
             'h' { & $self -Help }
             default { Write-Host '  not an option'; continue }
