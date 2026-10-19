@@ -11,7 +11,7 @@ cd hstc-campus-sso-login
 
 ## Windows
 
-直接运行包装器就行（它会自动绕过 PowerShell 的脚本执行限制，不改系统设置、不需要管理员）：
+直接运行包装器就行：
 
 ```
 campus-sso-login.cmd
@@ -30,7 +30,7 @@ campus-sso-login.cmd -Force            # 忽略在线状态，强制认证
 campus-sso-login.cmd -Help             # 列出全部选项
 ```
 
-会提示输入学号和密码（密码不回显）。
+会提示输入学号和密码。
 
 > 直接调 `.ps1` 的话会被执行策略拦住，需要自己加参数：
 > `powershell -ExecutionPolicy Bypass -File .\campus-sso-login.ps1`
@@ -39,14 +39,20 @@ campus-sso-login.cmd -Help             # 列出全部选项
 
 
 ## Linux / macOS
-先添加权限
-```bash
-chmod +x campus-sso-login.sh
-```
-输入执行
+
+直接运行：
+
 ```bash
 ./campus-sso-login.sh
 ```
+
+如果报 `Permission denied`，说明可执行位丢了（下载 ZIP 会出现，`git clone` 不会）。二选一：
+
+```bash
+chmod +x campus-sso-login.sh   # 补上可执行权限
+bash campus-sso-login.sh       # 或者直接用 bash 调用，效果完全一样
+```
+
 会提示输入学号和密码（密码不回显）。其它参数：
 ```bash
 # 菜单
